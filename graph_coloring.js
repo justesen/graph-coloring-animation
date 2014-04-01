@@ -2,12 +2,13 @@ var WIDTH = 800;
 var HEIGHT = 600;
 
 var ctx = initCanvas();
-var g_graph = new Graph("random16");
-var g_used_colors = 0;
-var g_order = [0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15];
-var g_iter = 0;
-var g_algo = "RND";
+var g_graph, g_algo, g_order, g_used_colors, g_iter;
 
+var colorAllButton = document.getElementById("colorall");
+var colorNextButton = document.getElementById("nextstep");
+var colorNewButton = document.getElementById("newgraph");
+
+newGraph("random16");
 draw(g_graph, g_order);
 
 
@@ -16,6 +17,8 @@ function colorAll() {
     while (g_iter < g_graph.size) {
         nextStep();
     }
+    colorAllButton.disabled = true;
+    colorNextButton.disabled = true;
 }
 
 
@@ -26,6 +29,9 @@ function nextStep() {
         g_iter++;
 
         draw(g_graph, g_order);
+    } else {
+        colorAllButton.disabled = true;
+        colorNextButton.disabled = true;
     }
 }
 
@@ -50,6 +56,8 @@ function newGraph(type) {
         LFalgo();
     } else if (g_algo === "RLF") {
         RLFalgo();
+    } else {
+        RNDalgo();
     }
     resetColoring();
 }
@@ -64,6 +72,8 @@ function RNDalgo() {
         });
         resetColoring();
     }
+    colorAllButton.disabled = false;
+    colorNextButton.disabled = false;
 }
 
 
@@ -76,30 +86,40 @@ function LFalgo() {
         });
         resetColoring();
     }
+    colorAllButton.disabled = false;
+    colorNextButton.disabled = false;
 }
 
 
 // Generate new random graph
 function newRandom8() {
-    newGraph("random8");
+    if (g_graph.type !== "random8") {
+       newGraph("random8");
+    }
 }
 
 
 // Generate new random graph
 function newRandom16() {
-    newGraph("random16");
+    if (g_graph.type !== "random16") {
+       newGraph("random16");
+    }
 }
 
 
 // Generate new clique graph
 function newClique() {
-    newGraph("clique");
+    if (g_graph.type !== "clique") {
+       newGraph("clique");
+    }
 }
 
 
 // Generate new envelope graph
 function newEnvelope() {
-    newGraph("envelope");
+    if (g_graph.type !== "envelope") {
+       newGraph("envelope");
+    }
 }
 
 
