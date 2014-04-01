@@ -57,9 +57,14 @@ function newGraph(type) {
     } else if (g_algo === "RLF") {
         RLFalgo();
     } else {
-        RNDalgo();
+        g_order.sort(function (i, j) {
+            return 0.5 - Math.random();
+        });
     }
     resetColoring();
+
+    colorAllButton.disabled = false;
+    colorNextButton.disabled = false;
 }
 
 
@@ -67,9 +72,6 @@ function newGraph(type) {
 function RNDalgo() {
     if (g_algo !== "RND") {
         g_algo = "RND";
-        g_order.sort(function (i, j) {
-            return 0.5 - Math.random();
-        });
         resetColoring();
     }
     colorAllButton.disabled = false;
