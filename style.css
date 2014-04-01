@@ -1,0 +1,11 @@
+html * {
+    font-family: 'Source Sans Pro', sans-serif;
+}
+
+div {
+    margin: 10px;
+}
+
+.center {
+    text-align: center;
+}

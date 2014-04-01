@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <title>Graph Coloring</title>
+
+        <link rel="stylesheet" type="text/css" href="style.css">
+        <link href="http://netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css" rel="stylesheet">
+        <link href="http://fonts.googleapis.com/css?family=Source+Sans+Pro" rel="stylesheet" type="text/css">
+    </head>
+
+    <body>
+        <h1 class="center">Graph Coloring</h1>
+        <div class="center">
+            <canvas id="content"></canvas>
+        </div>
+        <div class="center">
+            <button type="button" class="btn btn-primary" id="all" onclick="colorAll()">Color All</button>
+            <button type="button" class="btn btn-primary" id="next" onclick="nextStep()">Next Step</button>
+            <button type="button" class="btn btn-success" id="new" onclick="newGraph()">New Graph</button>
+        </div>
+        <div class="center">
+            <label class="radio-inline">
+                <input type="radio" name="algotype" onclick="RNDalgo()" checked="checked">RND
+            </label>
+            <label class="radio-inline">
+                <input type="radio" name="algotype" onclick="LFalgo()">LF
+            </label>
+            <label class="radio-inline">
+                <input type="radio" name="algotype" onclick="RLFalgo()">RLF
+            </label>
+        </div>
+        <div class="center">
+            <label class="radio-inline">
+                <input type="radio" name="graphtype" onclick="newRandom8()">Random 8
+            </label>
+            <label class="radio-inline">
+                <input type="radio" name="graphtype" onclick="newRandom16()" checked="checked">Random 16
+            </label>
+            <label class="radio-inline">
+                <input type="radio" name="graphtype" onclick="newClique()">Clique
+            </label>
+            <label class="radio-inline">
+                <input type="radio" name="graphtype" onclick="newEnvelope()">Envelope
+            </label>
+        </div>
+        <script src="graph_coloring.js"></script>
+    </body>
+</html>

@@ -1,0 +1,327 @@
+var WIDTH = 800;
+var HEIGHT = 600;
+
+var ctx = initCanvas();
+var g_graph = new Graph("random16");
+var g_used_colors = 0;
+var g_order = [0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15];
+var g_iter = 0;
+var g_algo = "RND";
+
+draw(g_graph, g_order);
+
+
+// Color all nodes
+function colorAll() {
+    while (g_iter < g_graph.size) {
+        nextStep();
+    }
+}
+
+
+// Run next step of the coloring algorithm
+function nextStep() {
+    if (g_iter < g_graph.size) {
+        g_used_colors = seqStepColor(g_graph, g_order[g_iter], g_used_colors);
+        g_iter++;
+
+        draw(g_graph, g_order);
+    }
+}
+
+
+// Prepare new graph for coloring
+function newGraph(type) {
+    var i;
+
+    if (type === undefined) {
+        g_graph = new Graph(g_graph.type);
+    } else {
+        g_graph = new Graph(type);
+    }
+    g_order = new Array(g_graph.size);
+
+    for (i = 0; i < g_graph.size; i++) {
+        g_order[i] = i;
+    }
+    if (g_algo === "RND") {
+        RNDalgo();
+    } else if (g_algo === "LF") {
+        LFalgo();
+    } else if (g_algo === "RLF") {
+        RLFalgo();
+    }
+    resetColoring();
+}
+
+
+// Switch to RND algorithm
+function RNDalgo() {
+    if (g_algo !== "RND") {
+        g_algo = "RND";
+        g_order.sort(function (i, j) {
+            return 0.5 - Math.random();
+        });
+        resetColoring();
+    }
+}
+
+
+// Switch to LF algorithm
+function LFalgo() {
+    if (g_algo !== "LF") {
+        g_algo = "LF";
+        g_order.sort(function (i, j) {
+            return g_graph.edges[j].length - g_graph.edges[i].length;
+        });
+        resetColoring();
+    }
+}
+
+
+// Generate new random graph
+function newRandom8() {
+    newGraph("random8");
+}
+
+
+// Generate new random graph
+function newRandom16() {
+    newGraph("random16");
+}
+
+
+// Generate new clique graph
+function newClique() {
+    newGraph("clique");
+}
+
+
+// Generate new envelope graph
+function newEnvelope() {
+    newGraph("envelope");
+}
+
+
+// Draw nodes
+function draw(graph, order) {
+    var coords = getNodeCoords(graph.size, graph.type);
+    var i, j;
+
+    clearCanvas();
+
+    // Draw edges between nodes
+    for (i = 0; i < graph.size; i++) {
+        for (j = i + 1; j < graph.size; j++) {
+            if (graph.adj(order[i], order[j])) {
+                ctx.beginPath();
+                ctx.moveTo(coords[order[i]][0], coords[order[i]][1]);
+                ctx.lineTo(coords[order[j]][0], coords[order[j]][1]);
+                ctx.fillStyle = '#000000';
+                ctx.stroke();
+            }
+        }
+    }
+
+    // Draw nodes
+    for (i = 0; i < graph.size; i++) {
+        ctx.beginPath();
+        ctx.arc(coords[order[i]][0], coords[order[i]][1], 10, 0, 2*Math.PI);
+        ctx.fillStyle = toString(graph.color[order[i]]);
+        ctx.fill();
+        ctx.lineWidth = 1;
+        ctx.strokeStyle = '#000000';
+        ctx.stroke();
+    }
+}
+
+
+// Calculate coordinates of nodes
+function getNodeCoords(size, type) {
+    var coords = [size];
+    var center_x = WIDTH/2;
+    var center_y = HEIGHT/2;
+    var radius = Math.min(WIDTH, HEIGHT)/2 - 20;
+    var angle;
+    var i;
+
+    if (type === "envelope") {
+        coords[0] = [WIDTH/4,   HEIGHT/4];
+        coords[1] = [3*WIDTH/4, HEIGHT/4];
+        coords[2] = [WIDTH/2, HEIGHT/2];
+        coords[3] = [WIDTH/4, 3*HEIGHT/4];
+        coords[4] = [3*WIDTH/4, 3*HEIGHT/4];
+        coords[5] = [WIDTH/2, HEIGHT/4];
+        coords[6] = [WIDTH/2, 15];
+    } else {
+        for (i = 0; i < size; i++) {
+            angle = 2*Math.PI / size * i;
+            coords[i] = [center_x + Math.cos(angle)*radius,
+                         center_y - Math.sin(angle)*radius];
+        }
+    }
+    return coords;
+}
+
+
+// Initialize canvas
+function initCanvas() {
+    var c = document.getElementById('content');
+    c.width = WIDTH;
+    c.height = HEIGHT;
+
+    return c.getContext('2d');
+}
+
+
+// Clear canvas
+function clearCanvas() {
+    ctx.fillStyle = '#FFFFFF';
+    ctx.beginPath();
+    ctx.rect(0, 0, WIDTH, HEIGHT);
+    ctx.closePath();
+    ctx.fill();
+}
+
+
+// Reset coloring
+function resetColoring() {
+    g_used_colors = 0;
+    g_iter = 0;
+
+    g_graph.clearColors();
+    draw(g_graph, g_order);
+}
+
+
+// Return color name based on integer value
+function toString(color) {
+    var colors = ['red' , 'yellow', 'blue', 'fuchsia', 'green', 'purple',
+                  'orange', 'maroon', 'navy', 'olive', 'lime', 'aqua',
+                  'silver', 'teal', 'gray'];
+
+    if (color === -1) {
+        return 'black';
+    } else if (color >= colors.length) {
+        return 'white';
+    } else {
+        return colors[color];
+    }
+}
+
+
+// Undirected graph
+function Graph(type) {
+    // Add undirected edge
+    this.addEdge = function (v, w) {
+        this.edges[v].push(w);
+        this.edges[w].push(v);
+    };
+
+    // Are v and w adjacent?
+    this.adj = function (v, w) {
+        return this.edges[v].indexOf(w) !== -1;
+    };
+
+    // Clear coloring of all nodes
+    this.clearColors = function () {
+        var i;
+
+        for (i = 0; i < this.size; i++) {
+            this.color[i] = -1;
+        }
+    };
+
+    this.init = function(size) {
+        this.size = size;
+        this.edges = new Array(size);
+        this.color = new Array(size);
+
+        for (i = 0; i < size; i++) {
+            this.edges[i] = [];
+            this.color[i] = -1;
+        }
+    }
+
+    // Construct n node graph
+    var i, j;
+    var edge_prob = 0.35;
+
+    this.type = type;
+
+    if (type === "random8") {
+        this.init(8);
+
+        for (i = 0; i < this.size - 1; i++) {
+            for (j = i + 1; j < this.size; j++) {
+                if (Math.random() < edge_prob) {
+                    this.addEdge(i, j);
+                }
+            }
+        }
+    } else if (type === "random16") {
+        this.init(16);
+
+        for (i = 0; i < this.size - 1; i++) {
+            for (j = i + 1; j < this.size; j++) {
+                if (Math.random() < edge_prob) {
+                    this.addEdge(i, j);
+                }
+            }
+        }
+    } else if (type === "clique") {
+        this.init(8);
+
+        for (i = 0; i < this.size - 1; i++) {
+            for (j = i + 1; j < this.size; j++) {
+                this.addEdge(i, j);
+            }
+        }
+    } else if (type === "envelope") {
+        this.init(7);
+
+        this.addEdge(0, 2);
+        this.addEdge(0, 3);
+        this.addEdge(0, 5);
+        this.addEdge(0, 6);
+        this.addEdge(1, 2);
+        this.addEdge(1, 4);
+        this.addEdge(1, 5);
+        this.addEdge(1, 6);
+        this.addEdge(2, 3);
+        this.addEdge(2, 4);
+        this.addEdge(3, 4);
+    } else {
+        throw "Invalid graph type: " + type;
+    }
+}
+
+
+// Color the next node of the node sequential algorithm
+function seqStepColor(graph, v, used_colors) {
+    var adj_colors = new Array(used_colors);
+    var w;
+    var i;
+
+    for (i = 0; i < used_colors; i++) {
+        adj_colors[i] = false;
+    }
+    for (i = 0; i < graph.edges[v].length; i++) {
+        w = graph.edges[v][i];
+
+        if (graph.color[w] >= 0) {
+            adj_colors[graph.color[w]] = true;
+        }
+    }
+    for (i = 0; i < used_colors; i++) {
+        if (!adj_colors[i]) {
+            graph.color[v] = i;
+            break;
+        }
+    }
+    if (graph.color[v] === -1) {
+        graph.color[v] = used_colors;
+        used_colors++;
+    }
+    return used_colors;
+}
