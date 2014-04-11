@@ -6,9 +6,8 @@ var g_graph, g_algo, g_order, g_used_colors, g_iter;
 
 var colorAllButton = document.getElementById("colorall");
 var colorNextButton = document.getElementById("nextstep");
-var colorNewButton = document.getElementById("newgraph");
 
-newGraph("random16");
+newGraph("random8");
 draw(g_graph, g_order);
 
 
@@ -25,11 +24,16 @@ function colorAll() {
 // Run next step of the coloring algorithm
 function nextStep() {
     if (g_iter < g_graph.size) {
-        g_used_colors = seqStepColor(g_graph, g_order[g_iter], g_used_colors);
+        if (g_algo === "RLF") {
+            g_used_colors = RLFStepColor(g_graph, g_iter, g_used_colors);
+        } else {
+            g_used_colors = seqStepColor(g_graph, g_order[g_iter], g_used_colors);
+        }
         g_iter++;
 
         draw(g_graph, g_order);
-    } else {
+    }
+    if (g_iter === g_graph.size) {
         colorAllButton.disabled = true;
         colorNextButton.disabled = true;
     }
@@ -57,9 +61,7 @@ function newGraph(type) {
     } else if (g_algo === "RLF") {
         RLFalgo();
     } else {
-        g_order.sort(function (i, j) {
-            return 0.5 - Math.random();
-        });
+        RNDalgo();
     }
     resetColoring();
 
@@ -72,6 +74,9 @@ function newGraph(type) {
 function RNDalgo() {
     if (g_algo !== "RND") {
         g_algo = "RND";
+        g_order.sort(function () {
+            return 0.5 - Math.random();
+        });
         resetColoring();
     }
     colorAllButton.disabled = false;
@@ -85,6 +90,20 @@ function LFalgo() {
         g_algo = "LF";
         g_order.sort(function (i, j) {
             return g_graph.edges[j].length - g_graph.edges[i].length;
+        });
+        resetColoring();
+    }
+    colorAllButton.disabled = false;
+    colorNextButton.disabled = false;
+}
+
+
+// Switch to RLF algorithm
+function RLFalgo() {
+    if (g_algo !== "RLF") {
+        g_algo = "RLF";
+        g_order.sort(function () {
+            return 0.5 - Math.random();
         });
         resetColoring();
     }
@@ -263,7 +282,7 @@ function Graph(type) {
             this.edges[i] = [];
             this.color[i] = -1;
         }
-    }
+    };
 
     // Construct n node graph
     var i, j;
@@ -346,4 +365,107 @@ function seqStepColor(graph, v, used_colors) {
         used_colors++;
     }
     return used_colors;
+}
+
+
+var E;
+var F;
+var next;
+
+
+// Color the next node of the RLF algorithm
+function RLFStepColor(graph, iter, used_colors) {
+    var i;
+
+    if (iter === 0) {
+        RLFinit(graph);
+    }
+    if (iter < graph.size) {
+        if (E[next] < 0 || iter === 0) {
+            used_colors++;
+
+            for (i = 0; i < graph.size; i++) {
+                if (F[i] > F[next]) {
+                    next = i;
+                }
+                E[i] = F[i];
+            }
+        }
+        graph.color[next] = used_colors - 1;
+        updateEandF(graph, next);
+        next = findNextInU1(next, graph.size);
+    }
+    return used_colors;
+}
+
+
+// Initialize state variables for RLF
+function RLFinit(graph) {
+    var i;
+
+    E = [graph.size];
+    F = [graph.size];
+    next = 0;
+
+    for (i = 0; i < graph.size; i++) {
+        E[i] = F[i] = graph.edges[i].length;
+    }
+}
+
+
+// Update E and F after node next has just been colored
+function updateEandF(graph, next) {
+    var v;
+    var i;
+
+    update(E, next, graph);
+    update(F, next, graph);
+
+    for (i = 0; i < graph.edges[next].length; i++) {
+        v = graph.edges[next][i];
+
+        if (E[v] >= 0) {
+            update(E, v, graph);
+        }
+    }
+}
+
+
+// Update array D according to node v
+function update(D, v, graph) {
+    var w;
+    var i;
+
+    D[v] = -1;
+
+    for (i = 0; i < graph.edges[v].length; i++) {
+        w = graph.edges[v][i];
+        D[w] -= 1;
+    }
+}
+
+
+// Find the next uncolored node in U1
+function findNextInU1(next, n) {
+    var i = 0;
+
+    while (i < n && E[i] < 0) {
+        i++;
+    }
+    if (i < n) {
+        next = i;
+
+        for (i = i + 1; i < n; i++) {
+            if (E[i] >= 0) {
+                if (F[i] - E[i] > F[next] - E[next]) {
+                    next = i;
+                } else if (F[i] - E[i] == F[next] - E[next]) {
+                    if (E[i] < E[next]) {
+                        next = i;
+                    }
+                }
+            }
+        }
+    }
+    return next;
 }
