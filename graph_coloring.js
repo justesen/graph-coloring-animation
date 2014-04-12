@@ -8,7 +8,7 @@ var colorAllButton = document.getElementById("colorall");
 var colorNextButton = document.getElementById("nextstep");
 
 newGraph("random8");
-draw(g_graph, g_order);
+draw(g_graph, g_order, g_algo, g_iter, g_used_colors);
 
 
 // Color all nodes
@@ -23,15 +23,21 @@ function colorAll() {
 
 // Run next step of the coloring algorithm
 function nextStep() {
+    var old_used_colors = g_used_colors;
+
     if (g_iter < g_graph.size) {
         if (g_algo === "RLF") {
             g_used_colors = RLFStepColor(g_graph, g_iter, g_used_colors);
+
+            if (g_used_colors > old_used_colors && g_iter > 0) {
+                g_iter--;
+            }
         } else {
             g_used_colors = seqStepColor(g_graph, g_order[g_iter], g_used_colors);
         }
         g_iter++;
 
-        draw(g_graph, g_order);
+        draw(g_graph, g_order, g_algo, g_used_colors);
     }
     if (g_iter === g_graph.size) {
         colorAllButton.disabled = true;
@@ -145,7 +151,7 @@ function newEnvelope() {
 
 
 // Draw nodes
-function draw(graph, order) {
+function draw(graph, order, algo, used_colors) {
     var coords = getNodeCoords(graph.size, graph.type);
     var i, j;
 
@@ -158,7 +164,13 @@ function draw(graph, order) {
                 ctx.beginPath();
                 ctx.moveTo(coords[order[i]][0], coords[order[i]][1]);
                 ctx.lineTo(coords[order[j]][0], coords[order[j]][1]);
-                ctx.fillStyle = '#000000';
+                ctx.lineWidth = 2;
+
+                if (algo === "RLF" && ((graph.color[order[i]] <= used_colors - 1 && graph.color[order[i]] !== -1) || ((graph.color[order[j]] <= used_colors - 1 && graph.color[order[j]] !== -1)))) {
+                    ctx.strokeStyle = "#CCCCCC";
+                } else {
+                    ctx.strokeStyle = '#000000';
+                }
                 ctx.stroke();
             }
         }
@@ -168,7 +180,12 @@ function draw(graph, order) {
     for (i = 0; i < graph.size; i++) {
         ctx.beginPath();
         ctx.arc(coords[order[i]][0], coords[order[i]][1], 10, 0, 2*Math.PI);
-        ctx.fillStyle = toString(graph.color[order[i]]);
+
+        if (used_colors > 0 && algo === "RLF" && graph.color[order[i]] < 0 && graph.adjacentToColor(order[i], used_colors - 1)) {
+            ctx.fillStyle = "#CCCCCC";
+        } else {
+            ctx.fillStyle = toString(graph.color[order[i]]);
+        }
         ctx.fill();
         ctx.lineWidth = 1;
         ctx.strokeStyle = '#000000';
@@ -231,7 +248,7 @@ function resetColoring() {
     g_iter = 0;
 
     g_graph.clearColors();
-    draw(g_graph, g_order);
+    draw(g_graph, g_order, g_algo, g_used_colors);
 }
 
 
@@ -254,18 +271,33 @@ function toString(color) {
 // Undirected graph
 function Graph(type) {
     // Add undirected edge
-    this.addEdge = function (v, w) {
+    this.addEdge = function(v, w) {
         this.edges[v].push(w);
         this.edges[w].push(v);
     };
 
     // Are v and w adjacent?
-    this.adj = function (v, w) {
+    this.adj = function(v, w) {
         return this.edges[v].indexOf(w) !== -1;
     };
 
+    // Is v adjacent to a node colored c?
+    this.adjacentToColor = function(v, c) {
+        var w;
+        var i;
+
+        for (i = 0; i < this.edges[v].length; i++) {
+            w = this.edges[v][i];
+
+            if (this.color[w] === c) {
+                return true;
+            }
+        }
+        return false;
+    };
+
     // Clear coloring of all nodes
-    this.clearColors = function () {
+    this.clearColors = function() {
         var i;
 
         for (i = 0; i < this.size; i++) {
@@ -273,6 +305,7 @@ function Graph(type) {
         }
     };
 
+    // Initialize edges and colors
     this.init = function(size) {
         this.size = size;
         this.edges = new Array(size);
@@ -389,6 +422,9 @@ function RLFStepColor(graph, iter, used_colors) {
                     next = i;
                 }
                 E[i] = F[i];
+            }
+            if (iter !== 0) {
+                return used_colors;
             }
         }
         graph.color[next] = used_colors - 1;
