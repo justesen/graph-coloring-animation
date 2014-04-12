@@ -181,14 +181,15 @@ function draw(graph, order, algo, used_colors) {
         ctx.beginPath();
         ctx.arc(coords[order[i]][0], coords[order[i]][1], 10, 0, 2*Math.PI);
 
-        if (used_colors > 0 && algo === "RLF" && graph.color[order[i]] < 0 && graph.adjacentToColor(order[i], used_colors - 1)) {
+        if (algo === "RLF" && used_colors > 0 && graph.color[order[i]] < 0 && graph.adjacentToColor(order[i], used_colors - 1)) {
             ctx.fillStyle = "#CCCCCC";
+            ctx.strokeStyle = '#CCCCCC';
         } else {
             ctx.fillStyle = toString(graph.color[order[i]]);
+            ctx.strokeStyle = '#000000';
         }
         ctx.fill();
         ctx.lineWidth = 1;
-        ctx.strokeStyle = '#000000';
         ctx.stroke();
     }
 }
