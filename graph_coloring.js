@@ -166,8 +166,16 @@ function draw(graph, order, algo, used_colors) {
                 ctx.lineTo(coords[order[j]][0], coords[order[j]][1]);
                 ctx.lineWidth = 2;
 
-                if (algo === "RLF" && ((graph.color[order[i]] <= used_colors - 1 && graph.color[order[i]] !== -1) || ((graph.color[order[j]] <= used_colors - 1 && graph.color[order[j]] !== -1)))) {
-                    ctx.strokeStyle = "#CCCCCC";
+                if (algo === "RLF") {
+                    if (graph.color[order[i]] >= 0 || graph.color[order[j]] >= 0
+                     || isInU2(order[i], graph, used_colors) && isInU2(order[j], graph, used_colors)) {
+                        ctx.strokeStyle = "#CCCCCC";
+                    } else if (isInU1(order[i], graph, used_colors) && isInU2(order[j], graph, used_colors)
+                            || isInU2(order[i], graph, used_colors) && isInU1(order[j], graph, used_colors)) {
+                        ctx.strokeStyle = "#FF0000";
+                    } else {
+                        ctx.strokeStyle = "#000000";
+                    }
                 } else {
                     ctx.strokeStyle = '#000000';
                 }
@@ -181,7 +189,7 @@ function draw(graph, order, algo, used_colors) {
         ctx.beginPath();
         ctx.arc(coords[order[i]][0], coords[order[i]][1], 10, 0, 2*Math.PI);
 
-        if (algo === "RLF" && used_colors > 0 && graph.color[order[i]] < 0 && graph.adjacentToColor(order[i], used_colors - 1)) {
+        if (algo === "RLF" && isInU2(order[i], graph, used_colors)) {
             ctx.fillStyle = "#CCCCCC";
             ctx.strokeStyle = '#CCCCCC';
         } else {
@@ -505,4 +513,17 @@ function findNextInU1(next, n) {
         }
     }
     return next;
+}
+
+
+function isInU2(v, graph, used_colors) {
+    return used_colors > 0
+        && graph.color[v] < 0
+        && graph.adjacentToColor(v, used_colors-1);
+
+}
+
+
+function isInU1(v, graph, used_colors) {
+    return !isInU2(v, graph, used_colors) && graph.color[v] < 0;
 }
