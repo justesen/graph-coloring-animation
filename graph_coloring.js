@@ -13,20 +13,21 @@ draw(g_graph, g_order, g_algo, g_iter, g_used_colors);
 
 // Color all nodes
 function colorAll() {
-    while (g_iter < g_graph.size) {
-        nextStep();
+    var hasNextStep = true;
+
+    while (hasNextStep) {
+        hasNextStep = nextStep();
     }
-    colorAllButton.disabled = true;
-    colorNextButton.disabled = true;
 }
 
 
 // Run next step of the coloring algorithm
 function nextStep() {
-    var old_used_colors = g_used_colors;
+    var old_used_colors;
 
     if (g_iter < g_graph.size) {
         if (g_algo === "RLF") {
+            old_used_colors = g_used_colors;
             g_used_colors = RLFStepColor(g_graph, g_iter, g_used_colors);
 
             if (g_used_colors > old_used_colors && g_iter > 0) {
@@ -38,11 +39,20 @@ function nextStep() {
         g_iter++;
 
         draw(g_graph, g_order, g_algo, g_used_colors);
-    }
-    if (g_iter === g_graph.size) {
+    } else if (g_algo === "RLF") {
         colorAllButton.disabled = true;
         colorNextButton.disabled = true;
+        draw(g_graph, g_order, "RND", g_used_colors);
+
+        return false;
     }
+    if (g_algo !== "RLF" && g_iter === g_graph.size) {
+        colorAllButton.disabled = true;
+        colorNextButton.disabled = true;
+
+        return false;
+    }
+    return true;
 }
 
 
@@ -516,14 +526,13 @@ function findNextInU1(next, n) {
 }
 
 
+// Is node v in U2?
 function isInU2(v, graph, used_colors) {
-    return used_colors > 0
-        && graph.color[v] < 0
-        && graph.adjacentToColor(v, used_colors-1);
+    return used_colors > 0 && graph.color[v] < 0 && graph.adjacentToColor(v, used_colors-1);
 
 }
 
-
+// Is node v in U1?
 function isInU1(v, graph, used_colors) {
     return !isInU2(v, graph, used_colors) && graph.color[v] < 0;
 }
