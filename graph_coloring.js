@@ -114,6 +114,18 @@ function LFalgo() {
 }
 
 
+// Switch to SL algorithm
+function SLalgo() {
+    if (g_algo !== "SL") {
+        g_algo = "SL";
+        SLsort(g_order);
+        resetColoring();
+    }
+    colorAllButton.disabled = false;
+    colorNextButton.disabled = false;
+}
+
+
 // Switch to RLF algorithm
 function RLFalgo() {
     if (g_algo !== "RLF") {
