@@ -7,6 +7,7 @@ var g_graph, g_algo, g_order, g_used_colors, g_iter;
 var colorAllButton = document.getElementById("colorall");
 var colorNextButton = document.getElementById("nextstep");
 
+g_algo = "RND";
 newGraph("random8");
 draw(g_graph, g_order, g_algo, g_iter, g_used_colors);
 
@@ -58,31 +59,43 @@ function nextStep() {
 
 // Prepare new graph for coloring
 function newGraph(type) {
-    var i;
-
     if (type === undefined) {
         g_graph = new Graph(g_graph.type);
     } else {
         g_graph = new Graph(type);
     }
-    g_order = new Array(g_graph.size);
+    g_used_colors = 0;
+    g_iter = 0;
+    g_graph.clearColors();
+    g_order = resetOrder(g_graph.size);
 
-    for (i = 0; i < g_graph.size; i++) {
-        g_order[i] = i;
-    }
     if (g_algo === "RND") {
         RNDalgo();
     } else if (g_algo === "LF") {
         LFalgo();
+    } else if (g_algo === "SL") {
+        SLalgo();
     } else if (g_algo === "RLF") {
         RLFalgo();
     } else {
-        RNDalgo();
+        throw "Invalid algorithm type: " + g_algo;
     }
-    resetColoring();
+    draw(g_graph, g_order, g_algo, g_used_colors);
 
     colorAllButton.disabled = false;
     colorNextButton.disabled = false;
+}
+
+
+// Reset order
+function resetOrder(size) {
+    var order = new Array(size);
+    var i;
+
+    for (i = 0; i < size; i++) {
+        order[i] = i;
+    }
+    return order;
 }
 
 
@@ -93,10 +106,7 @@ function RNDalgo() {
         g_order.sort(function () {
             return 0.5 - Math.random();
         });
-        resetColoring();
     }
-    colorAllButton.disabled = false;
-    colorNextButton.disabled = false;
 }
 
 
@@ -107,10 +117,7 @@ function LFalgo() {
         g_order.sort(function (i, j) {
             return g_graph.edges[j].length - g_graph.edges[i].length;
         });
-        resetColoring();
     }
-    colorAllButton.disabled = false;
-    colorNextButton.disabled = false;
 }
 
 
@@ -118,11 +125,9 @@ function LFalgo() {
 function SLalgo() {
     if (g_algo !== "SL") {
         g_algo = "SL";
-        SLsort(g_order);
-        resetColoring();
+        SLsort(g_order, g_graph);
+        console.log(g_order);
     }
-    colorAllButton.disabled = false;
-    colorNextButton.disabled = false;
 }
 
 
@@ -130,13 +135,7 @@ function SLalgo() {
 function RLFalgo() {
     if (g_algo !== "RLF") {
         g_algo = "RLF";
-        g_order.sort(function () {
-            return 0.5 - Math.random();
-        });
-        resetColoring();
     }
-    colorAllButton.disabled = false;
-    colorNextButton.disabled = false;
 }
 
 
@@ -227,7 +226,7 @@ function draw(graph, order, algo, used_colors) {
 
 // Calculate coordinates of nodes
 function getNodeCoords(size, type) {
-    var coords = [size];
+    var coords = new Array(size);
     var center_x = WIDTH/2;
     var center_y = HEIGHT/2;
     var radius = Math.min(WIDTH, HEIGHT)/2 - 20;
@@ -270,16 +269,6 @@ function clearCanvas() {
     ctx.rect(0, 0, WIDTH, HEIGHT);
     ctx.closePath();
     ctx.fill();
-}
-
-
-// Reset coloring
-function resetColoring() {
-    g_used_colors = 0;
-    g_iter = 0;
-
-    g_graph.clearColors();
-    draw(g_graph, g_order, g_algo, g_used_colors);
 }
 
 
@@ -334,6 +323,11 @@ function Graph(type) {
         for (i = 0; i < this.size; i++) {
             this.color[i] = -1;
         }
+    };
+
+    // Degree of node v
+    this.degree = function(v) {
+        return this.edges[v].length;
     };
 
     // Initialize edges and colors
@@ -399,6 +393,42 @@ function Graph(type) {
     } else {
         throw "Invalid graph type: " + type;
     }
+}
+
+
+// Order nodes smallest last
+function SLsort(graph, order) {
+    var sl_degree = new Array(graph.size);
+    var v;
+    var i, j;
+
+    for (i = 0; i < graph.size; i++) {
+        sl_degree[i] = graph.degree(i);
+    }
+    swapSmallestLast(order, sl_degree, graph.size - 1);
+
+    for (i = graph.size - 1; i > 0; i--) {
+        for (j = 0; j < graph.degree(i); j++) {
+            v = graph.edges[i][j];
+            sl_degree[v]--;
+        }
+        swapSmallestLast(order, sl_degree, i - 1);
+    }
+}
+
+
+function swapSmallestLast(order, sl_degree, l) {
+    var min_index = l;
+    var i, tmp;
+
+    for (i = 0; i < l; i++) {
+        if (sl_degree[i] < sl_degree[min_index]) {
+            min_index = i;
+        }
+    }
+    tmp = order[l];
+    order[l] = order[min_index];
+    order[min_index] = tmp;
 }
 
 
