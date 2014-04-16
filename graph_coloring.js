@@ -9,7 +9,6 @@ var colorNextButton = document.getElementById("nextstep");
 
 g_algo = "RND";
 newGraph("random8");
-draw(g_graph, g_order, g_algo, g_iter, g_used_colors);
 
 
 // Color all nodes
@@ -64,10 +63,8 @@ function newGraph(type) {
     } else {
         g_graph = new Graph(type);
     }
-    g_used_colors = 0;
-    g_iter = 0;
-    g_graph.clearColors();
     g_order = resetOrder(g_graph.size);
+    resetColoring();
 
     if (g_algo === "RND") {
         RNDalgo();
@@ -81,9 +78,6 @@ function newGraph(type) {
         throw "Invalid algorithm type: " + g_algo;
     }
     draw(g_graph, g_order, g_algo, g_used_colors);
-
-    colorAllButton.disabled = false;
-    colorNextButton.disabled = false;
 }
 
 
@@ -99,6 +93,16 @@ function resetOrder(size) {
 }
 
 
+// Reset graph coloring and buttons
+function resetColoring() {
+    g_used_colors = 0;
+    g_iter = 0;
+    g_graph.clearColors();
+    colorAllButton.disabled = false;
+    colorNextButton.disabled = false;
+}
+
+
 // Switch to RND algorithm
 function RNDalgo() {
     if (g_algo !== "RND") {
@@ -107,6 +111,8 @@ function RNDalgo() {
             return 0.5 - Math.random();
         });
     }
+    resetColoring();
+    draw(g_graph, g_order, g_algo, g_used_colors);
 }
 
 
@@ -118,6 +124,8 @@ function LFalgo() {
             return g_graph.degree(j) - g_graph.degree(i);
         });
     }
+    resetColoring();
+    draw(g_graph, g_order, g_algo, g_used_colors);
 }
 
 
@@ -126,8 +134,9 @@ function SLalgo() {
     if (g_algo !== "SL") {
         g_algo = "SL";
         SLsort(g_order, g_graph);
-        console.log(g_order);
     }
+    resetColoring();
+    draw(g_graph, g_order, g_algo, g_used_colors);
 }
 
 
@@ -136,6 +145,8 @@ function RLFalgo() {
     if (g_algo !== "RLF") {
         g_algo = "RLF";
     }
+    resetColoring();
+    draw(g_graph, g_order, g_algo, g_used_colors);
 }
 
 
@@ -186,20 +197,7 @@ function draw(graph, order, algo, used_colors) {
                 ctx.moveTo(coords[order[i]][0], coords[order[i]][1]);
                 ctx.lineTo(coords[order[j]][0], coords[order[j]][1]);
                 ctx.lineWidth = 2;
-
-                if (algo === "RLF") {
-                    if (graph.color[order[i]] >= 0 || graph.color[order[j]] >= 0
-                     || isInU2(order[i], graph, used_colors) && isInU2(order[j], graph, used_colors)) {
-                        ctx.strokeStyle = "#CCCCCC";
-                    } else if (isInU1(order[i], graph, used_colors) && isInU2(order[j], graph, used_colors)
-                            || isInU2(order[i], graph, used_colors) && isInU1(order[j], graph, used_colors)) {
-                        ctx.strokeStyle = "#FF0000";
-                    } else {
-                        ctx.strokeStyle = "#000000";
-                    }
-                } else {
-                    ctx.strokeStyle = '#000000';
-                }
+                ctx.strokeStyle = getEdgeColor(graph, algo, used_colors, order[i], order[j]);
                 ctx.stroke();
             }
         }
@@ -209,18 +207,42 @@ function draw(graph, order, algo, used_colors) {
     for (i = 0; i < graph.size; i++) {
         ctx.beginPath();
         ctx.arc(coords[order[i]][0], coords[order[i]][1], 10, 0, 2*Math.PI);
-
-        if (algo === "RLF" && isInU2(order[i], graph, used_colors)) {
-            ctx.fillStyle = "#CCCCCC";
-            ctx.strokeStyle = '#CCCCCC';
-        } else {
-            ctx.fillStyle = toString(graph.color[order[i]]);
-            ctx.strokeStyle = '#000000';
-        }
+        ctx.fillStyle = getNodeColor(graph, algo, used_colors, order[i]);
+        ctx.strokeStyle = getNoderBorderColor(graph, algo, used_colors, order[i]);
         ctx.fill();
         ctx.lineWidth = 1;
         ctx.stroke();
     }
+}
+
+
+function getEdgeColor(graph, used_colors, algo, v, w) {
+    if (algo === "RLF") {
+        if (graph.color[v] >= 0 || graph.color[w] >= 0
+         || isInU2(graph, used_colors, v) && isInU2(graph, used_colors, w)) {
+            return "#CCCCCC";
+        } else if (isInU1(graph, used_colors, v) && isInU2(graph, used_colors, w)
+                || isInU2(graph, used_colors, v) && isInU1(graph, used_colors, w)) {
+            return "#FF0000";
+        }
+    }
+    return '#000000';
+}
+
+
+function getNodeColor(graph, algo, used_colors, v) {
+    if (algo === "RLF" && isInU2(graph, c, used_colors)) {
+        return "#CCCCCC";
+    }
+    return toString(graph.color[v]);
+}
+
+
+function getNodeBorderColor(graph, algo, used_colors, v) {
+    if (algo === "RLF" && isInU2(graph, c, used_colors)) {
+        return "#CCCCCC";
+    }
+    return "#000000";
 }
 
 
@@ -569,12 +591,12 @@ function findNextInU1(next, n) {
 
 
 // Is node v in U2?
-function isInU2(v, graph, used_colors) {
+function isInU2(graph, used_colors, v) {
     return used_colors > 0 && graph.color[v] < 0 && graph.adjacentToColor(v, used_colors-1);
 
 }
 
 // Is node v in U1?
-function isInU1(v, graph, used_colors) {
-    return !isInU2(v, graph, used_colors) && graph.color[v] < 0;
+function isInU1(graph, used_colors, v) {
+    return !isInU2(graph, used_colors, v) && graph.color[v] < 0;
 }
