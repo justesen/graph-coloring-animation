@@ -115,7 +115,7 @@ function LFalgo() {
     if (g_algo !== "LF") {
         g_algo = "LF";
         g_order.sort(function (i, j) {
-            return g_graph.edges[j].length - g_graph.edges[i].length;
+            return g_graph.degree(j) - g_graph.degree(i);
         });
     }
 }
