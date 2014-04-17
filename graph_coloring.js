@@ -1,8 +1,8 @@
-var WIDTH = 800;
-var HEIGHT = 600;
+var WIDTH = 400;
+var HEIGHT = 400;
 
 var ctx = initCanvas();
-var g_graph, g_algo, g_order, g_used_colors, g_iter;
+var g_graph, g_algo, g_order, g_hasNextStep;
 
 var colorAllButton = document.getElementById("colorall");
 var colorNextButton = document.getElementById("nextstep");
@@ -23,47 +23,26 @@ function colorAll() {
 
 // Run next step of the coloring algorithm
 function nextStep() {
-    var old_used_colors;
-
-    if (g_iter < g_graph.size) {
-        if (g_algo === "RLF") {
-            old_used_colors = g_used_colors;
-            g_used_colors = RLFStepColor(g_graph, g_iter, g_used_colors);
-
-            if (g_used_colors > old_used_colors && g_iter > 0) {
-                g_iter--;
-            }
-        } else {
-            g_used_colors = seqStepColor(g_graph, g_order[g_iter], g_used_colors);
-        }
-        g_iter++;
-
-        draw(g_graph, g_order, g_algo, g_used_colors);
-    } else if (g_algo === "RLF") {
+    if (g_hasNextStep) {
+        g_hasNextStep = g_graph.stepColor(g_algo, g_order);
+        draw(g_graph, g_algo, g_order);
+    }
+    if (!g_hasNextStep) {
         colorAllButton.disabled = true;
         colorNextButton.disabled = true;
-        draw(g_graph, g_order, "RND", g_used_colors);
-
-        return false;
     }
-    if (g_algo !== "RLF" && g_iter === g_graph.size) {
-        colorAllButton.disabled = true;
-        colorNextButton.disabled = true;
-
-        return false;
-    }
-    return true;
+    return g_hasNextStep;
 }
 
 
 // Prepare new graph for coloring
 function newGraph(type) {
     if (type === undefined) {
-        g_graph = new Graph(g_graph.type);
+        g_graph = new Graph(g_graph.type());
     } else {
         g_graph = new Graph(type);
     }
-    g_order = resetOrder(g_graph.size);
+    g_order = resetOrder(g_graph.size());
     resetColoring();
 
     if (g_algo === "RND") {
@@ -77,26 +56,13 @@ function newGraph(type) {
     } else {
         throw "Invalid algorithm type: " + g_algo;
     }
-    draw(g_graph, g_order, g_algo, g_used_colors);
-}
-
-
-// Reset order
-function resetOrder(size) {
-    var order = new Array(size);
-    var i;
-
-    for (i = 0; i < size; i++) {
-        order[i] = i;
-    }
-    return order;
+    draw(g_graph, g_algo, g_order);
 }
 
 
 // Reset graph coloring and buttons
 function resetColoring() {
-    g_used_colors = 0;
-    g_iter = 0;
+    g_hasNextStep = true;
     g_graph.clearColors();
     colorAllButton.disabled = false;
     colorNextButton.disabled = false;
@@ -107,12 +73,10 @@ function resetColoring() {
 function RNDalgo() {
     if (g_algo !== "RND") {
         g_algo = "RND";
-        g_order.sort(function () {
-            return 0.5 - Math.random();
-        });
+        g_graph.sortNodes("RND", g_order);
     }
     resetColoring();
-    draw(g_graph, g_order, g_algo, g_used_colors);
+    draw(g_graph, g_algo, g_order);
 }
 
 
@@ -120,12 +84,10 @@ function RNDalgo() {
 function LFalgo() {
     if (g_algo !== "LF") {
         g_algo = "LF";
-        g_order.sort(function (i, j) {
-            return g_graph.degree(j) - g_graph.degree(i);
-        });
+        g_graph.sortNodes("LF", g_order);
     }
     resetColoring();
-    draw(g_graph, g_order, g_algo, g_used_colors);
+    draw(g_graph, g_algo, g_order);
 }
 
 
@@ -133,10 +95,10 @@ function LFalgo() {
 function SLalgo() {
     if (g_algo !== "SL") {
         g_algo = "SL";
-        SLsort(g_order, g_graph);
+        g_graph.sortNodes("SL", g_order);
     }
     resetColoring();
-    draw(g_graph, g_order, g_algo, g_used_colors);
+    draw(g_graph, g_algo, g_order);
 }
 
 
@@ -144,16 +106,17 @@ function SLalgo() {
 function RLFalgo() {
     if (g_algo !== "RLF") {
         g_algo = "RLF";
+        g_graph.sortNodes("RLF", g_order);
     }
     resetColoring();
-    draw(g_graph, g_order, g_algo, g_used_colors);
+    draw(g_graph, g_algo, g_order);
 }
 
 
 // Generate new random graph
 function newRandom8() {
     if (g_graph.type !== "random8") {
-       newGraph("random8");
+        newGraph("random8");
     }
 }
 
@@ -169,7 +132,7 @@ function newRandom16() {
 // Generate new clique graph
 function newClique() {
     if (g_graph.type !== "clique") {
-       newGraph("clique");
+        newGraph("clique");
     }
 }
 
@@ -177,38 +140,43 @@ function newClique() {
 // Generate new envelope graph
 function newEnvelope() {
     if (g_graph.type !== "envelope") {
-       newGraph("envelope");
+        newGraph("envelope");
     }
 }
 
 
 // Draw nodes
-function draw(graph, order, algo, used_colors) {
-    var coords = getNodeCoords(graph.size, graph.type);
+function draw(graph, algo, order) {
+    var coords = getNodeCoords(graph.size(), graph.type);
+    var v, w;
     var i, j;
 
     clearCanvas();
 
     // Draw edges between nodes
-    for (i = 0; i < graph.size; i++) {
-        for (j = i + 1; j < graph.size; j++) {
-            if (graph.adj(order[i], order[j])) {
+    for (i = 0; i < graph.size(); i++) {
+        for (j = i + 1; j < graph.size(); j++) {
+            v = order[i];
+            w = order[j];
+
+            if (graph.adjacent(v, w)) {
                 ctx.beginPath();
-                ctx.moveTo(coords[order[i]][0], coords[order[i]][1]);
-                ctx.lineTo(coords[order[j]][0], coords[order[j]][1]);
+                ctx.moveTo(coords[v][0], coords[v][1]);
+                ctx.lineTo(coords[w][0], coords[w][1]);
                 ctx.lineWidth = 2;
-                ctx.strokeStyle = getEdgeColor(graph, algo, used_colors, order[i], order[j]);
+                ctx.strokeStyle = getEdgeColor(graph, algo, v, w);
                 ctx.stroke();
             }
         }
     }
 
     // Draw nodes
-    for (i = 0; i < graph.size; i++) {
+    for (i = 0; i < graph.size(); i++) {
+        v = order[i];
         ctx.beginPath();
-        ctx.arc(coords[order[i]][0], coords[order[i]][1], 10, 0, 2*Math.PI);
-        ctx.fillStyle = getNodeColor(graph, algo, used_colors, order[i]);
-        ctx.strokeStyle = getNoderBorderColor(graph, algo, used_colors, order[i]);
+        ctx.arc(coords[v][0], coords[v][1], 10, 0, 2*Math.PI);
+        ctx.fillStyle = getNodeColor(graph, algo, v);
+        ctx.strokeStyle = getNodeBorderColor(graph, algo, v);
         ctx.fill();
         ctx.lineWidth = 1;
         ctx.stroke();
@@ -216,30 +184,28 @@ function draw(graph, order, algo, used_colors) {
 }
 
 
-function getEdgeColor(graph, used_colors, algo, v, w) {
+function getEdgeColor(graph, algo, v, w) {
     if (algo === "RLF") {
-        if (graph.color[v] >= 0 || graph.color[w] >= 0
-         || isInU2(graph, used_colors, v) && isInU2(graph, used_colors, w)) {
+        if (graph.color(v) >= 0 || graph.color(w) >= 0 || (graph.isInU2(v) && graph.isInU2(w))) {
             return "#CCCCCC";
-        } else if (isInU1(graph, used_colors, v) && isInU2(graph, used_colors, w)
-                || isInU2(graph, used_colors, v) && isInU1(graph, used_colors, w)) {
+        } else if ((graph.isInU1(v) && graph.isInU2(w)) || (graph.isInU1(w) && graph.isInU2(v))) {
             return "#FF0000";
         }
     }
-    return '#000000';
+    return "#000000";
 }
 
 
-function getNodeColor(graph, algo, used_colors, v) {
-    if (algo === "RLF" && isInU2(graph, c, used_colors)) {
+function getNodeColor(graph, algo, v) {
+    if (algo === "RLF" && graph.isInU2(v)) {
         return "#CCCCCC";
     }
-    return toString(graph.color[v]);
+    return colorToString(graph.color(v));
 }
 
 
-function getNodeBorderColor(graph, algo, used_colors, v) {
-    if (algo === "RLF" && isInU2(graph, c, used_colors)) {
+function getNodeBorderColor(graph, algo, v) {
+    if (algo === "RLF" && graph.isInU2(v)) {
         return "#CCCCCC";
     }
     return "#000000";
@@ -279,7 +245,6 @@ function initCanvas() {
     var c = document.getElementById('content');
     c.width = WIDTH;
     c.height = HEIGHT;
-
     return c.getContext('2d');
 }
 
@@ -295,308 +260,350 @@ function clearCanvas() {
 
 
 // Return color name based on integer value
-function toString(color) {
+function colorToString(i) {
     var colors = ['red' , 'yellow', 'blue', 'fuchsia', 'green', 'purple',
                   'orange', 'maroon', 'navy', 'olive', 'lime', 'aqua',
                   'silver', 'teal', 'gray'];
 
-    if (color === -1) {
+    if (i === -1) {
         return 'black';
-    } else if (color >= colors.length) {
+    } else if (i >= colors.length) {
+        console.log("Color higher than available: " + i);
         return 'white';
     } else {
-        return colors[color];
+        return colors[i];
     }
+}
+
+
+// Reset order
+function resetOrder(size) {
+    var order = new Array(size);
+    var i;
+
+    for (i = 0; i < size; i++) {
+        order[i] = i;
+    }
+    return order;
 }
 
 
 // Undirected graph
 function Graph(type) {
-    // Add undirected edge
-    this.addEdge = function(v, w) {
-        this.edges[v].push(w);
-        this.edges[w].push(v);
-    };
-
-    // Are v and w adjacent?
-    this.adj = function(v, w) {
-        return this.edges[v].indexOf(w) !== -1;
-    };
-
-    // Is v adjacent to a node colored c?
-    this.adjacentToColor = function(v, c) {
-        var w;
-        var i;
-
-        for (i = 0; i < this.edges[v].length; i++) {
-            w = this.edges[v][i];
-
-            if (this.color[w] === c) {
-                return true;
-            }
-        }
-        return false;
-    };
-
-    // Clear coloring of all nodes
-    this.clearColors = function() {
-        var i;
-
-        for (i = 0; i < this.size; i++) {
-            this.color[i] = -1;
-        }
-    };
-
-    // Degree of node v
-    this.degree = function(v) {
-        return this.edges[v].length;
-    };
-
-    // Initialize edges and colors
-    this.init = function(size) {
-        this.size = size;
-        this.edges = new Array(size);
-        this.color = new Array(size);
-
-        for (i = 0; i < size; i++) {
-            this.edges[i] = [];
-            this.color[i] = -1;
-        }
-    };
-
     // Construct n node graph
+    var size;
+    var edges;
+    var color;
+    var used_colors = 0;
+    var next;
+    var iter = 0;
+    var E, F;
+
     var i, j;
     var edge_prob = 0.35;
 
-    this.type = type;
+    RLFinit();
 
     if (type === "random8") {
-        this.init(8);
+        init(8);
 
-        for (i = 0; i < this.size - 1; i++) {
-            for (j = i + 1; j < this.size; j++) {
+        for (i = 0; i < size - 1; i++) {
+            for (j = i + 1; j < size; j++) {
                 if (Math.random() < edge_prob) {
-                    this.addEdge(i, j);
+                    addEdge(i, j);
                 }
             }
         }
     } else if (type === "random16") {
-        this.init(16);
+        init(16);
 
-        for (i = 0; i < this.size - 1; i++) {
-            for (j = i + 1; j < this.size; j++) {
+        for (i = 0; i < size - 1; i++) {
+            for (j = i + 1; j < size; j++) {
                 if (Math.random() < edge_prob) {
-                    this.addEdge(i, j);
+                    addEdge(i, j);
                 }
             }
         }
     } else if (type === "clique") {
-        this.init(8);
+        init(8);
 
-        for (i = 0; i < this.size - 1; i++) {
-            for (j = i + 1; j < this.size; j++) {
-                this.addEdge(i, j);
+        for (i = 0; i < size - 1; i++) {
+            for (j = i + 1; j < size; j++) {
+                addEdge(i, j);
             }
         }
     } else if (type === "envelope") {
-        this.init(7);
+        init(7);
 
-        this.addEdge(0, 2);
-        this.addEdge(0, 3);
-        this.addEdge(0, 5);
-        this.addEdge(0, 6);
-        this.addEdge(1, 2);
-        this.addEdge(1, 4);
-        this.addEdge(1, 5);
-        this.addEdge(1, 6);
-        this.addEdge(2, 3);
-        this.addEdge(2, 4);
-        this.addEdge(3, 4);
+        addEdge(0, 2);
+        addEdge(0, 3);
+        addEdge(0, 5);
+        addEdge(0, 6);
+        addEdge(1, 2);
+        addEdge(1, 4);
+        addEdge(1, 5);
+        addEdge(1, 6);
+        addEdge(2, 3);
+        addEdge(2, 4);
+        addEdge(3, 4);
     } else {
         throw "Invalid graph type: " + type;
     }
-}
 
+    // Are v and w adjacent?
+    this.adjacent = function (v, w) {
+        return edges[v].indexOf(w) !== -1;
+    };
 
-// Order nodes smallest last
-function SLsort(graph, order) {
-    var sl_degree = new Array(graph.size);
-    var v;
-    var i, j;
+    this.color = function (v) {
+        return color[v];
+    };
 
-    for (i = 0; i < graph.size; i++) {
-        sl_degree[i] = graph.degree(i);
-    }
-    swapSmallestLast(order, sl_degree, graph.size - 1);
+    // Clear coloring of all nodes
+    this.clearColors = function () {
+        var i;
 
-    for (i = graph.size - 1; i > 0; i--) {
-        for (j = 0; j < graph.degree(i); j++) {
-            v = graph.edges[i][j];
-            sl_degree[v]--;
+        next = 0;
+        iter = 0;
+        used_colors = 0;
+
+        for (i = 0; i < size; i++) {
+            color[i] = -1;
         }
-        swapSmallestLast(order, sl_degree, i - 1);
-    }
-}
+    };
 
+    // Is node v in U1?
+    this.isInU1 = function (v) {
+        return E[v] >= 0;
+    };
 
-function swapSmallestLast(order, sl_degree, l) {
-    var min_index = l;
-    var i, tmp;
+    // Is node v in U2?
+    this.isInU2 = function (v) {
+        return E[v] < 0 && F[v] >= 0;
+    };
 
-    for (i = 0; i < l; i++) {
-        if (sl_degree[i] < sl_degree[min_index]) {
-            min_index = i;
+    this.size = function () {
+        return size;
+    };
+
+    // Sort nodes according to algorithm
+    this.sortNodes = function (algo, order) {
+        if (algo === "RND") {
+            order.sort(function () {
+                return 0.5 - Math.random();
+            });
+        } else if (algo === "LF") {
+            order.sort(function (i, j) {
+                return degree(j) - degree(i);
+            });
+        } else if (algo === "SL") {
+            SLsort(order);
+        } else if (algo === "RLF") {
+            // No initial randomization/sorting
+        } else {
+            throw "Invalid algorithm: " + algo;
+        }
+    };
+
+    this.type = function () {
+        return type;
+    };
+
+    // Color the next node according to algorithm
+    this.stepColor = function (algo, order) {
+        var v = order[iter];
+
+        if (algo === "RLF") {
+            return RLFStepColor();
+        } else {
+            return seqStepColor(v);
+        }
+    };
+
+    // Initialize edges and colors
+    function init(n) {
+        size = n;
+        edges = new Array(size);
+        color = new Array(size);
+
+        for (i = 0; i < size; i++) {
+            edges[i] = [];
+            color[i] = -1;
         }
     }
-    tmp = order[l];
-    order[l] = order[min_index];
-    order[min_index] = tmp;
-}
 
-
-// Color the next node of the node sequential algorithm
-function seqStepColor(graph, v, used_colors) {
-    var adj_colors = new Array(used_colors);
-    var w;
-    var i;
-
-    for (i = 0; i < used_colors; i++) {
-        adj_colors[i] = false;
+    // Add undirected edge
+    function addEdge(v, w) {
+        edges[v].push(w);
+        edges[w].push(v);
     }
-    for (i = 0; i < graph.edges[v].length; i++) {
-        w = graph.edges[v][i];
 
-        if (graph.color[w] >= 0) {
-            adj_colors[graph.color[w]] = true;
+    // Degree of node v
+    function degree(v) {
+        return edges[v].length;
+    }
+
+    // Sort nodes in SL order
+    function SLsort(order) {
+        var sl_degree = new Array(size);
+        var v;
+        var i, j;
+
+        for (i = 0; i < size; i++) {
+            sl_degree[i] = degree(i);
+        }
+        swapSL(order, sl_degree, size - 1);
+
+        for (i = size - 1; i > 0; i--) {
+            for (j = 0; j < degree(i); j++) {
+                v = edges[i][j];
+                sl_degree[v]--;
+            }
+            swapSL(order, sl_degree, i - 1);
         }
     }
-    for (i = 0; i < used_colors; i++) {
-        if (!adj_colors[i]) {
-            graph.color[v] = i;
-            break;
+
+    // Swap the nodes with smallest degree to index l in order
+    function swapSL(order, sl_degree, l) {
+        var min_index = l;
+        var i, tmp;
+
+        for (i = 0; i < l; i++) {
+            if (sl_degree[i] < sl_degree[min_index]) {
+                min_index = i;
+            }
         }
+        tmp = order[l];
+        order[l] = order[min_index];
+        order[min_index] = tmp;
     }
-    if (graph.color[v] === -1) {
-        graph.color[v] = used_colors;
-        used_colors++;
-    }
-    return used_colors;
-}
 
+    // Color the next node of the node sequential algorithm
+    function seqStepColor(v) {
+        var adj_colors = new Array(used_colors);
+        var w;
+        var i;
 
-var E;
-var F;
-var next;
+        for (i = 0; i < used_colors; i++) {
+            adj_colors[i] = false;
+        }
+        for (i = 0; i < degree(v); i++) {
+            w = edges[v][i];
 
-
-// Color the next node of the RLF algorithm
-function RLFStepColor(graph, iter, used_colors) {
-    var i;
-
-    if (iter === 0) {
-        RLFinit(graph);
-    }
-    if (iter < graph.size) {
-        if (E[next] < 0 || iter === 0) {
+            if (color[w] >= 0) {
+                adj_colors[color[w]] = true;
+            }
+        }
+        for (i = 0; i < used_colors; i++) {
+            if (!adj_colors[i]) {
+                color[v] = i;
+                break;
+            }
+        }
+        if (color[v] === -1) {
+            color[v] = used_colors;
             used_colors++;
-
-            for (i = 0; i < graph.size; i++) {
-                if (F[i] > F[next]) {
-                    next = i;
-                }
-                E[i] = F[i];
-            }
-            if (iter !== 0) {
-                return used_colors;
-            }
         }
-        graph.color[next] = used_colors - 1;
-        updateEandF(graph, next);
-        next = findNextInU1(next, graph.size);
+        iter++;
+
+        return iter < size;
     }
-    return used_colors;
-}
 
+    // Color the next node of the RLF algorithm
+    function RLFStepColor() {
+        var hasNextStep = true;
+        var i;
 
-// Initialize state variables for RLF
-function RLFinit(graph) {
-    var i;
-
-    E = [graph.size];
-    F = [graph.size];
-    next = 0;
-
-    for (i = 0; i < graph.size; i++) {
-        E[i] = F[i] = graph.edges[i].length;
-    }
-}
-
-
-// Update E and F after node next has just been colored
-function updateEandF(graph, next) {
-    var v;
-    var i;
-
-    update(E, next, graph);
-    update(F, next, graph);
-
-    for (i = 0; i < graph.edges[next].length; i++) {
-        v = graph.edges[next][i];
-
-        if (E[v] >= 0) {
-            update(E, v, graph);
+        if (iter === 0) {
+            RLFinit();
         }
-    }
-}
+        if (iter < size) {
+            if (E[next] < 0 || iter === 0) {
+                used_colors++;
 
-
-// Update array D according to node v
-function update(D, v, graph) {
-    var w;
-    var i;
-
-    D[v] = -1;
-
-    for (i = 0; i < graph.edges[v].length; i++) {
-        w = graph.edges[v][i];
-        D[w] -= 1;
-    }
-}
-
-
-// Find the next uncolored node in U1
-function findNextInU1(next, n) {
-    var i = 0;
-
-    while (i < n && E[i] < 0) {
-        i++;
-    }
-    if (i < n) {
-        next = i;
-
-        for (i = i + 1; i < n; i++) {
-            if (E[i] >= 0) {
-                if (F[i] - E[i] > F[next] - E[next]) {
-                    next = i;
-                } else if (F[i] - E[i] == F[next] - E[next]) {
-                    if (E[i] < E[next]) {
+                for (i = 0; i < size; i++) {
+                    if (F[i] > F[next]) {
                         next = i;
+                    }
+                    E[i] = F[i];
+                }
+                if (iter !== 0) {
+                    iter--;
+                }
+            }
+            color[next] = used_colors - 1;
+            updateEandF(next);
+            next = findNextInU1(next, size);
+            iter++;
+        }
+        return hasNextStep;
+    }
+
+    // Initialize state variables for RLF
+    function RLFinit() {
+        var i;
+
+        E = [size];
+        F = [size];
+        next = 0;
+
+        for (i = 0; i < size; i++) {
+            E[i] = F[i] = degree(i);
+        }
+    }
+
+    // Update E and F after node next has just been colored
+    function updateEandF(next) {
+        var v;
+        var i;
+
+        update(E, next);
+        update(F, next);
+
+        for (i = 0; i < degree(next); i++) {
+            v = edges[next][i];
+
+            if (E[v] >= 0) {
+                update(E, v);
+            }
+        }
+    }
+
+    // Update array D according to node v
+    function update(D, v) {
+        var w;
+        var i;
+
+        D[v] = -1;
+
+        for (i = 0; i < degree(v); i++) {
+            w = edges[v][i];
+            D[w] -= 1;
+        }
+    }
+
+    // Find the next uncolored node in U1
+    function findNextInU1(next, n) {
+        var i = 0;
+
+        while (i < n && E[i] < 0) {
+            i++;
+        }
+        if (i < n) {
+            next = i;
+
+            for (i = i + 1; i < n; i++) {
+                if (E[i] >= 0) {
+                    if (F[i] - E[i] > F[next] - E[next]) {
+                        next = i;
+                    } else if (F[i] - E[i] == F[next] - E[next]) {
+                        if (E[i] < E[next]) {
+                            next = i;
+                        }
                     }
                 }
             }
         }
+        return next;
     }
-    return next;
-}
-
-
-// Is node v in U2?
-function isInU2(graph, used_colors, v) {
-    return used_colors > 0 && graph.color[v] < 0 && graph.adjacentToColor(v, used_colors-1);
-
-}
-
-// Is node v in U1?
-function isInU1(graph, used_colors, v) {
-    return !isInU2(graph, used_colors, v) && graph.color[v] < 0;
 }
