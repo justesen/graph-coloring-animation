@@ -115,7 +115,7 @@ function newRandom8() {
 // Generate new random graph with sixteen nodes
 function newRandom16() {
     if (g_graph.type() !== "random16") {
-       newGraph("random16");
+        newGraph("random16");
     }
 }
 
@@ -363,9 +363,9 @@ function Graph(type) {
     };
 
     // Return number of nodes colored so far
-    this.coloredNodes = function (v) {
+    this.coloredNodes = function () {
         return colored_nodes;
-    }
+    };
 
     // Clear coloring of all nodes
     this.clearColors = function () {
@@ -561,7 +561,7 @@ function Graph(type) {
                 if (E[i] >= 0) {
                     if (F[i] - E[i] > F[next] - E[next]) {
                         next = i;
-                    } else if (F[i] - E[i] == F[next] - E[next]) {
+                    } else if (F[i] - E[i] === F[next] - E[next]) {
                         if (E[i] < E[next]) {
                             next = i;
                         }
