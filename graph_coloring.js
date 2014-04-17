@@ -60,15 +60,6 @@ function newGraph(type) {
 }
 
 
-// Reset graph coloring and buttons
-function resetColoring() {
-    g_hasNextStep = true;
-    g_graph.clearColors();
-    colorAllButton.disabled = false;
-    colorNextButton.disabled = false;
-}
-
-
 // Switch to RND algorithm
 function RNDalgo() {
     if (g_algo !== "RND") {
@@ -113,25 +104,25 @@ function RLFalgo() {
 }
 
 
-// Generate new random graph
+// Generate new random graph with eight nodes
 function newRandom8() {
-    if (g_graph.type !== "random8") {
+    if (g_graph.type() !== "random8") {
         newGraph("random8");
     }
 }
 
 
-// Generate new random graph
+// Generate new random graph with sixteen nodes
 function newRandom16() {
-    if (g_graph.type !== "random16") {
+    if (g_graph.type() !== "random16") {
        newGraph("random16");
     }
 }
 
 
-// Generate new clique graph
+// Generate new 8-clique graph
 function newClique() {
-    if (g_graph.type !== "clique") {
+    if (g_graph.type() !== "clique") {
         newGraph("clique");
     }
 }
@@ -139,15 +130,36 @@ function newClique() {
 
 // Generate new envelope graph
 function newEnvelope() {
-    if (g_graph.type !== "envelope") {
+    if (g_graph.type() !== "envelope") {
         newGraph("envelope");
     }
 }
 
 
+// Reset graph coloring and buttons
+function resetColoring() {
+    g_hasNextStep = true;
+    g_graph.clearColors();
+    colorAllButton.disabled = false;
+    colorNextButton.disabled = false;
+}
+
+
+// Reset order
+function resetOrder(size) {
+    var order = new Array(size);
+    var i;
+
+    for (i = 0; i < size; i++) {
+        order[i] = i;
+    }
+    return order;
+}
+
+
 // Draw nodes
 function draw(graph, algo, order) {
-    var coords = getNodeCoords(graph.size(), graph.type);
+    var coords = getNodeCoords(graph.size(), graph.type());
     var v, w;
     var i, j;
 
@@ -184,8 +196,9 @@ function draw(graph, algo, order) {
 }
 
 
+// Return color of edge (v, w)
 function getEdgeColor(graph, algo, v, w) {
-    if (algo === "RLF") {
+    if (algo === "RLF" && graph.coloredNodes() <= graph.size()) {
         if (graph.color(v) >= 0 || graph.color(w) >= 0 || (graph.isInU2(v) && graph.isInU2(w))) {
             return "#CCCCCC";
         } else if ((graph.isInU1(v) && graph.isInU2(w)) || (graph.isInU1(w) && graph.isInU2(v))) {
@@ -196,6 +209,7 @@ function getEdgeColor(graph, algo, v, w) {
 }
 
 
+// Return color of node v
 function getNodeColor(graph, algo, v) {
     if (algo === "RLF" && graph.isInU2(v)) {
         return "#CCCCCC";
@@ -204,6 +218,7 @@ function getNodeColor(graph, algo, v) {
 }
 
 
+// Return border color of node v
 function getNodeBorderColor(graph, algo, v) {
     if (algo === "RLF" && graph.isInU2(v)) {
         return "#CCCCCC";
@@ -276,18 +291,6 @@ function colorToString(i) {
 }
 
 
-// Reset order
-function resetOrder(size) {
-    var order = new Array(size);
-    var i;
-
-    for (i = 0; i < size; i++) {
-        order[i] = i;
-    }
-    return order;
-}
-
-
 // Undirected graph
 function Graph(type) {
     // Construct n node graph
@@ -295,14 +298,13 @@ function Graph(type) {
     var edges;
     var color;
     var used_colors = 0;
-    var next;
-    var iter = 0;
+    var next = 0;
+    var colored_nodes = 0;
+    var skip_on_new_color = false;
     var E, F;
 
     var i, j;
     var edge_prob = 0.35;
-
-    RLFinit();
 
     if (type === "random8") {
         init(8);
@@ -355,17 +357,26 @@ function Graph(type) {
         return edges[v].indexOf(w) !== -1;
     };
 
+    // Return color of v
     this.color = function (v) {
         return color[v];
     };
+
+    // Return number of nodes colored so far
+    this.coloredNodes = function (v) {
+        return colored_nodes;
+    }
 
     // Clear coloring of all nodes
     this.clearColors = function () {
         var i;
 
         next = 0;
-        iter = 0;
+        colored_nodes = 0;
         used_colors = 0;
+        skip_on_new_color = false;
+
+        RLFinit();
 
         for (i = 0; i < size; i++) {
             color[i] = -1;
@@ -382,6 +393,7 @@ function Graph(type) {
         return E[v] < 0 && F[v] >= 0;
     };
 
+    // Return number of nodes
     this.size = function () {
         return size;
     };
@@ -405,13 +417,14 @@ function Graph(type) {
         }
     };
 
+    // Return graph type (random8, envelope, ...)
     this.type = function () {
         return type;
     };
 
     // Color the next node according to algorithm
     this.stepColor = function (algo, order) {
-        var v = order[iter];
+        var v = order[colored_nodes];
 
         if (algo === "RLF") {
             return RLFStepColor();
@@ -432,7 +445,134 @@ function Graph(type) {
         }
     }
 
-    // Add undirected edge
+    // Color the next node of the node sequential algorithm
+    function seqStepColor(v) {
+        var adj_colors = new Array(used_colors);
+        var w;
+        var i;
+
+        for (i = 0; i < used_colors; i++) {
+            adj_colors[i] = false;
+        }
+        for (i = 0; i < degree(v); i++) {
+            w = edges[v][i];
+
+            if (color[w] >= 0) {
+                adj_colors[color[w]] = true;
+            }
+        }
+        for (i = 0; i < used_colors; i++) {
+            if (!adj_colors[i]) {
+                color[v] = i;
+                break;
+            }
+        }
+        if (color[v] === -1) {
+            color[v] = used_colors;
+            used_colors++;
+        }
+        colored_nodes++;
+
+        return colored_nodes < size;
+    }
+
+    // Color the next node of the RLF algorithm
+    function RLFStepColor() {
+        var i;
+
+        if (colored_nodes < size) {
+            if (E[next] < 0 || colored_nodes === 0) {
+                for (i = 0; i < size; i++) {
+                    if (F[i] > F[next]) {
+                        next = i;
+                    }
+                    E[i] = F[i];
+                }
+                used_colors++;
+
+                if (skip_on_new_color) {
+                    skip_on_new_color = false;
+                    return true;
+                }
+            }
+            skip_on_new_color = true;
+            color[next] = used_colors - 1;
+            updateEandF(next);
+            next = findNextInU1(next);
+        }
+        colored_nodes++;
+
+        return colored_nodes <= size;
+    }
+
+    // Initialize state variables for RLF (arrays E and F)
+    function RLFinit() {
+        var i;
+
+        E = [size];
+        F = [size];
+
+        for (i = 0; i < size; i++) {
+            E[i] = F[i] = degree(i);
+        }
+    }
+
+    // Update E and F after node next has just been colored
+    function updateEandF(next) {
+        var v;
+        var i;
+
+        update(E, next);
+        update(F, next);
+
+        for (i = 0; i < degree(next); i++) {
+            v = edges[next][i];
+
+            if (E[v] >= 0) {
+                update(E, v);
+            }
+        }
+    }
+
+    // Update array D according to node v (delete procedure)
+    function update(D, v) {
+        var w;
+        var i;
+
+        D[v] = -1;
+
+        for (i = 0; i < degree(v); i++) {
+            w = edges[v][i];
+            D[w] -= 1;
+        }
+    }
+
+    // Find the next uncolored node in U1
+    function findNextInU1(next) {
+        var i = 0;
+
+        while (i < size && E[i] < 0) {
+            i++;
+        }
+        if (i < size) {
+            next = i;
+
+            for (i = i + 1; i < size; i++) {
+                if (E[i] >= 0) {
+                    if (F[i] - E[i] > F[next] - E[next]) {
+                        next = i;
+                    } else if (F[i] - E[i] == F[next] - E[next]) {
+                        if (E[i] < E[next]) {
+                            next = i;
+                        }
+                    }
+                }
+            }
+        }
+        return next;
+    }
+
+    // Add undirected edge between v and w
     function addEdge(v, w) {
         edges[v].push(w);
         edges[w].push(v);
@@ -476,134 +616,5 @@ function Graph(type) {
         tmp = order[l];
         order[l] = order[min_index];
         order[min_index] = tmp;
-    }
-
-    // Color the next node of the node sequential algorithm
-    function seqStepColor(v) {
-        var adj_colors = new Array(used_colors);
-        var w;
-        var i;
-
-        for (i = 0; i < used_colors; i++) {
-            adj_colors[i] = false;
-        }
-        for (i = 0; i < degree(v); i++) {
-            w = edges[v][i];
-
-            if (color[w] >= 0) {
-                adj_colors[color[w]] = true;
-            }
-        }
-        for (i = 0; i < used_colors; i++) {
-            if (!adj_colors[i]) {
-                color[v] = i;
-                break;
-            }
-        }
-        if (color[v] === -1) {
-            color[v] = used_colors;
-            used_colors++;
-        }
-        iter++;
-
-        return iter < size;
-    }
-
-    // Color the next node of the RLF algorithm
-    function RLFStepColor() {
-        var hasNextStep = true;
-        var i;
-
-        if (iter === 0) {
-            RLFinit();
-        }
-        if (iter < size) {
-            if (E[next] < 0 || iter === 0) {
-                used_colors++;
-
-                for (i = 0; i < size; i++) {
-                    if (F[i] > F[next]) {
-                        next = i;
-                    }
-                    E[i] = F[i];
-                }
-                if (iter !== 0) {
-                    iter--;
-                }
-            }
-            color[next] = used_colors - 1;
-            updateEandF(next);
-            next = findNextInU1(next, size);
-            iter++;
-        }
-        return hasNextStep;
-    }
-
-    // Initialize state variables for RLF
-    function RLFinit() {
-        var i;
-
-        E = [size];
-        F = [size];
-        next = 0;
-
-        for (i = 0; i < size; i++) {
-            E[i] = F[i] = degree(i);
-        }
-    }
-
-    // Update E and F after node next has just been colored
-    function updateEandF(next) {
-        var v;
-        var i;
-
-        update(E, next);
-        update(F, next);
-
-        for (i = 0; i < degree(next); i++) {
-            v = edges[next][i];
-
-            if (E[v] >= 0) {
-                update(E, v);
-            }
-        }
-    }
-
-    // Update array D according to node v
-    function update(D, v) {
-        var w;
-        var i;
-
-        D[v] = -1;
-
-        for (i = 0; i < degree(v); i++) {
-            w = edges[v][i];
-            D[w] -= 1;
-        }
-    }
-
-    // Find the next uncolored node in U1
-    function findNextInU1(next, n) {
-        var i = 0;
-
-        while (i < n && E[i] < 0) {
-            i++;
-        }
-        if (i < n) {
-            next = i;
-
-            for (i = i + 1; i < n; i++) {
-                if (E[i] >= 0) {
-                    if (F[i] - E[i] > F[next] - E[next]) {
-                        next = i;
-                    } else if (F[i] - E[i] == F[next] - E[next]) {
-                        if (E[i] < E[next]) {
-                            next = i;
-                        }
-                    }
-                }
-            }
-        }
-        return next;
     }
 }
