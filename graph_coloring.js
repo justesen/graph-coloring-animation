@@ -62,10 +62,8 @@ function newGraph(type) {
 
 // Switch to RND algorithm
 function RNDalgo() {
-    if (g_algo !== "RND") {
-        g_algo = "RND";
-        g_graph.sortNodes("RND", g_order);
-    }
+    g_algo = "RND";
+    g_graph.sortNodes("RND", g_order);
     resetColoring();
     draw(g_graph, g_algo, g_order);
 }
@@ -73,10 +71,8 @@ function RNDalgo() {
 
 // Switch to LF algorithm
 function LFalgo() {
-    if (g_algo !== "LF") {
-        g_algo = "LF";
-        g_graph.sortNodes("LF", g_order);
-    }
+    g_algo = "LF";
+    g_graph.sortNodes("LF", g_order);
     resetColoring();
     draw(g_graph, g_algo, g_order);
 }
@@ -84,10 +80,8 @@ function LFalgo() {
 
 // Switch to SL algorithm
 function SLalgo() {
-    if (g_algo !== "SL") {
-        g_algo = "SL";
-        g_graph.sortNodes("SL", g_order);
-    }
+    g_algo = "SL";
+    g_graph.sortNodes("SL", g_order);
     resetColoring();
     draw(g_graph, g_algo, g_order);
 }
@@ -95,10 +89,8 @@ function SLalgo() {
 
 // Switch to RLF algorithm
 function RLFalgo() {
-    if (g_algo !== "RLF") {
-        g_algo = "RLF";
-        g_graph.sortNodes("RLF", g_order);
-    }
+    g_algo = "RLF";
+    g_graph.sortNodes("RLF", g_order);
     resetColoring();
     draw(g_graph, g_algo, g_order);
 }
@@ -121,9 +113,9 @@ function newRandom16() {
 
 
 // Generate new 8-clique graph
-function newClique() {
-    if (g_graph.type() !== "clique") {
-        newGraph("clique");
+function newRandom32() {
+    if (g_graph.type() !== "random32") {
+        newGraph("random32");
     }
 }
 
@@ -132,6 +124,14 @@ function newClique() {
 function newEnvelope() {
     if (g_graph.type() !== "envelope") {
         newGraph("envelope");
+    }
+}
+
+
+// Generate new envelope graph
+function newPrismatoid() {
+    if (g_graph.type() !== "prismatoid") {
+        newGraph("prismatoid");
     }
 }
 
@@ -237,13 +237,22 @@ function getNodeCoords(size, type) {
     var i;
 
     if (type === "envelope") {
-        coords[0] = [WIDTH/4,   HEIGHT/4];
+        coords[0] = [WIDTH/4, HEIGHT/4];
         coords[1] = [3*WIDTH/4, HEIGHT/4];
         coords[2] = [WIDTH/2, HEIGHT/2];
         coords[3] = [WIDTH/4, 3*HEIGHT/4];
         coords[4] = [3*WIDTH/4, 3*HEIGHT/4];
         coords[5] = [WIDTH/2, HEIGHT/4];
         coords[6] = [WIDTH/2, 15];
+    } else if (type === "prismatoid") {
+        coords[0] = [WIDTH/2, 15];
+        coords[1] = [WIDTH - 15, HEIGHT/2];
+        coords[2] = [WIDTH/2, HEIGHT - 15];
+        coords[3] = [15, HEIGHT/2];
+        coords[4] = [WIDTH/3, HEIGHT/3];
+        coords[5] = [2*WIDTH/3, HEIGHT/3];
+        coords[6] = [2*WIDTH/3, 2*HEIGHT/3];
+        coords[7] = [WIDTH/3, 2*HEIGHT/3];
     } else {
         for (i = 0; i < size; i++) {
             angle = 2*Math.PI / size * i;
@@ -304,7 +313,7 @@ function Graph(type) {
     var E, F;
 
     var i, j;
-    var edge_prob = 0.35;
+    var edge_prob = 0.40;
 
     if (type === "random8") {
         init(8);
@@ -326,12 +335,14 @@ function Graph(type) {
                 }
             }
         }
-    } else if (type === "clique") {
-        init(8);
+    } else if (type === "random32") {
+        init(32);
 
         for (i = 0; i < size - 1; i++) {
             for (j = i + 1; j < size; j++) {
-                addEdge(i, j);
+                if (Math.random() < edge_prob) {
+                    addEdge(i, j);
+                }
             }
         }
     } else if (type === "envelope") {
@@ -348,6 +359,25 @@ function Graph(type) {
         addEdge(2, 3);
         addEdge(2, 4);
         addEdge(3, 4);
+    } else if (type === "prismatoid") {
+        init(8);
+
+        addEdge(0, 3);
+        addEdge(0, 4);
+        addEdge(0, 5);
+        addEdge(0, 1);
+        addEdge(1, 5);
+        addEdge(1, 6);
+        addEdge(1, 2);
+        addEdge(2, 6);
+        addEdge(2, 7);
+        addEdge(2, 3);
+        addEdge(3, 7);
+        addEdge(3, 4);
+        addEdge(4, 5);
+        addEdge(4, 7);
+        addEdge(5, 6);
+        addEdge(6, 7);
     } else {
         throw "Invalid graph type: " + type;
     }
@@ -409,6 +439,9 @@ function Graph(type) {
                 return degree(j) - degree(i);
             });
         } else if (algo === "SL") {
+            order.sort(function (i, j) {
+                return i - j;
+            });
             SLsort(order);
         } else if (algo === "RLF") {
             // No initial randomization/sorting
@@ -586,30 +619,40 @@ function Graph(type) {
     // Sort nodes in SL order
     function SLsort(order) {
         var sl_degree = new Array(size);
-        var v;
+        var v, w;
         var i, j;
 
         for (i = 0; i < size; i++) {
             sl_degree[i] = degree(i);
         }
         swapSL(order, sl_degree, size - 1);
+        console.log(sl_degree);
 
         for (i = size - 1; i > 0; i--) {
-            for (j = 0; j < degree(i); j++) {
-                v = edges[i][j];
-                sl_degree[v]--;
+            v = order[i];
+
+            for (j = 0; j < degree(v); j++) {
+                w = edges[v][j];
+                sl_degree[w]--;
             }
             swapSL(order, sl_degree, i - 1);
+            console.log(sl_degree + "   " + v);
         }
+        console.log(order);
     }
 
     // Swap the nodes with smallest degree to index l in order
     function swapSL(order, sl_degree, l) {
-        var min_index = l;
-        var i, tmp;
+        var min_index = Math.floor(Math.random() * (l + 1));
+        var min = order[min_index];
+        var i, v;
+        var tmp;
 
-        for (i = 0; i < l; i++) {
-            if (sl_degree[i] < sl_degree[min_index]) {
+        for (i = 0; i <= l; i++) {
+            v = order[i];
+
+            if (sl_degree[v] < sl_degree[min]) {
+                min = v;
                 min_index = i;
             }
         }
