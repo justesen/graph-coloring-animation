@@ -2,10 +2,12 @@ html * {
     font-family: 'Source Sans Pro', sans-serif;
 }
 
-div {
+.center {
+    text-align: center;
     margin: 10px;
 }
 
-.center {
-    text-align: center;
+#content {
+    display: block;
+    margin: 10px auto;
 }

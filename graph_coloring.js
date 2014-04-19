@@ -285,9 +285,9 @@ function clearCanvas() {
 
 // Return color name based on integer value
 function colorToString(i) {
-    var colors = ['red' , 'yellow', 'blue', 'fuchsia', 'green', 'purple',
-                  'orange', 'maroon', 'navy', 'olive', 'lime', 'aqua',
-                  'silver', 'teal', 'gray'];
+    var colors = ['red' , 'yellow', 'blue', 'fuchsia', 'green', 'orange',
+                  'purple', 'maroon', 'navy', 'olive', 'lime', 'aqua',
+                  'silver', 'teal'];
 
     if (i === -1) {
         return 'black';
@@ -435,6 +435,9 @@ function Graph(type) {
                 return 0.5 - Math.random();
             });
         } else if (algo === "LF") {
+            order.sort(function () {
+                return 0.5 - Math.random();
+            });
             order.sort(function (i, j) {
                 return degree(j) - degree(i);
             });
@@ -510,9 +513,12 @@ function Graph(type) {
     }
 
     // Color the next node of the RLF algorithm
-    function RLFStepColor() {
+    function RLFStepColor(v) {
         var i;
 
+        if (colored_nodes === 0) {
+            next = Math.floor(Math.random() * size);
+        }
         if (colored_nodes < size) {
             if (E[next] < 0 || colored_nodes === 0) {
                 for (i = 0; i < size; i++) {
@@ -626,7 +632,6 @@ function Graph(type) {
             sl_degree[i] = degree(i);
         }
         swapSL(order, sl_degree, size - 1);
-        console.log(sl_degree);
 
         for (i = size - 1; i > 0; i--) {
             v = order[i];
@@ -636,9 +641,7 @@ function Graph(type) {
                 sl_degree[w]--;
             }
             swapSL(order, sl_degree, i - 1);
-            console.log(sl_degree + "   " + v);
         }
-        console.log(order);
     }
 
     // Swap the nodes with smallest degree to index l in order
