@@ -18,33 +18,36 @@
         </div>
         <div class="center">
             <label class="radio-inline">
-                <input type="radio" name="algotype" onclick="RNDalgo()" checked="checked">RND
+                <input type="radio" name="algotype" onclick="switchAlgo('RND')" checked="checked">RND
             </label>
             <label class="radio-inline">
-                <input type="radio" name="algotype" onclick="LFalgo()">LF
+                <input type="radio" name="algotype" onclick="switchAlgo('SF')">SF
             </label>
             <label class="radio-inline">
-                <input type="radio" name="algotype" onclick="SLalgo()">SL
+                <input type="radio" name="algotype" onclick="switchAlgo('LF')">LF
             </label>
             <label class="radio-inline">
-                <input type="radio" name="algotype" onclick="RLFalgo()">RLF
+                <input type="radio" name="algotype" onclick="switchAlgo('SL')">SL
+            </label>
+            <label class="radio-inline">
+                <input type="radio" name="algotype" onclick="switchAlgo('RLF')">RLF
             </label>
         </div>
         <div class="center">
             <label class="radio-inline">
-                <input type="radio" name="graphtype" onclick="newRandom8()" checked="checked">Random 8
+                <input type="radio" name="graphtype" onclick="switchGraph('random8')" checked="checked">Random 8
             </label>
             <label class="radio-inline">
-                <input type="radio" name="graphtype" onclick="newRandom16()">Random 16
+                <input type="radio" name="graphtype" onclick="switchGraph('random16')">Random 16
             </label>
             <label class="radio-inline">
-                <input type="radio" name="graphtype" onclick="newRandom32()">Random 32
+                <input type="radio" name="graphtype" onclick="switchGraph('random32')">Random 32
             </label>
             <label class="radio-inline">
-                <input type="radio" name="graphtype" onclick="newEnvelope()">Envelope
+                <input type="radio" name="graphtype" onclick="switchGraph('envelope')">Envelope
             </label>
             <label class="radio-inline">
-                <input type="radio" name="graphtype" onclick="newPrismatoid()">Prismatoid
+                <input type="radio" name="graphtype" onclick="switchGraph('prismatoid')">Prismatoid
             </label>
         </div>
         <script src="graph_coloring.js"></script>

@@ -44,94 +44,29 @@ function newGraph(type) {
     }
     g_order = resetOrder(g_graph.size());
     resetColoring();
-
-    if (g_algo === "RND") {
-        RNDalgo();
-    } else if (g_algo === "LF") {
-        LFalgo();
-    } else if (g_algo === "SL") {
-        SLalgo();
-    } else if (g_algo === "RLF") {
-        RLFalgo();
-    } else {
-        throw "Invalid algorithm type: " + g_algo;
-    }
+    switchAlgo(g_algo);
     draw(g_graph, g_algo, g_order);
 }
 
 
-// Switch to RND algorithm
-function RNDalgo() {
-    g_algo = "RND";
-    g_graph.sortNodes("RND", g_order);
+// Switch coloring algorithm
+function switchAlgo(algo) {
+    var algos = ["RND", "SF", "LF", "SL", "RLF"];
+
+    if (algos.indexOf(algo) === -1) {
+        throw "Invalid algorithm type: " + algo;
+    }
+    g_algo = algo;
+    g_graph.sortNodes(algo, g_order);
     resetColoring();
     draw(g_graph, g_algo, g_order);
 }
 
 
-// Switch to LF algorithm
-function LFalgo() {
-    g_algo = "LF";
-    g_graph.sortNodes("LF", g_order);
-    resetColoring();
-    draw(g_graph, g_algo, g_order);
-}
-
-
-// Switch to SL algorithm
-function SLalgo() {
-    g_algo = "SL";
-    g_graph.sortNodes("SL", g_order);
-    resetColoring();
-    draw(g_graph, g_algo, g_order);
-}
-
-
-// Switch to RLF algorithm
-function RLFalgo() {
-    g_algo = "RLF";
-    g_graph.sortNodes("RLF", g_order);
-    resetColoring();
-    draw(g_graph, g_algo, g_order);
-}
-
-
-// Generate new random graph with eight nodes
-function newRandom8() {
-    if (g_graph.type() !== "random8") {
-        newGraph("random8");
-    }
-}
-
-
-// Generate new random graph with sixteen nodes
-function newRandom16() {
-    if (g_graph.type() !== "random16") {
-        newGraph("random16");
-    }
-}
-
-
-// Generate new 8-clique graph
-function newRandom32() {
-    if (g_graph.type() !== "random32") {
-        newGraph("random32");
-    }
-}
-
-
-// Generate new envelope graph
-function newEnvelope() {
-    if (g_graph.type() !== "envelope") {
-        newGraph("envelope");
-    }
-}
-
-
-// Generate new envelope graph
-function newPrismatoid() {
-    if (g_graph.type() !== "prismatoid") {
-        newGraph("prismatoid");
+// Switch graph type
+function switchGraph(type) {
+    if (g_graph.type() !== type) {
+        newGraph(type);
     }
 }
 
@@ -431,13 +366,14 @@ function Graph(type) {
     // Sort nodes according to algorithm
     this.sortNodes = function (algo, order) {
         if (algo === "RND") {
-            order.sort(function () {
-                return 0.5 - Math.random();
+            randomOrder(order);
+        } else if (algo === "SF") {
+            randomOrder(order);
+            order.sort(function (i, j) {
+                return degree(i) - degree(j);
             });
         } else if (algo === "LF") {
-            order.sort(function () {
-                return 0.5 - Math.random();
-            });
+            randomOrder(order);
             order.sort(function (i, j) {
                 return degree(j) - degree(i);
             });
@@ -513,7 +449,7 @@ function Graph(type) {
     }
 
     // Color the next node of the RLF algorithm
-    function RLFStepColor(v) {
+    function RLFStepColor() {
         var i;
 
         if (colored_nodes === 0) {
@@ -620,6 +556,13 @@ function Graph(type) {
     // Degree of node v
     function degree(v) {
         return edges[v].length;
+    }
+
+    // Order nodes randomly
+    function randomOrder(order) {
+        order.sort(function () {
+            return 0.5 - Math.random();
+        });
     }
 
     // Sort nodes in SL order
