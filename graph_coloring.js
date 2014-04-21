@@ -1,5 +1,8 @@
 var WIDTH = 400;
 var HEIGHT = 400;
+var DEFAULT_COLOR = "#000000";
+var U2_COLOR = "#e6e6e6";
+var U2_EDGE_COLOR = "#ee5f5b";
 
 var ctx = initCanvas();
 var g_graph, g_algo, g_order, g_hasNextStep;
@@ -135,19 +138,19 @@ function draw(graph, algo, order) {
 function getEdgeColor(graph, algo, v, w) {
     if (algo === "RLF" && graph.coloredNodes() <= graph.size()) {
         if (graph.color(v) >= 0 || graph.color(w) >= 0 || (graph.isInU2(v) && graph.isInU2(w))) {
-            return "#CCCCCC";
+            return U2_COLOR;
         } else if ((graph.isInU1(v) && graph.isInU2(w)) || (graph.isInU1(w) && graph.isInU2(v))) {
-            return "#FF0000";
+            return U2_EDGE_COLOR;
         }
     }
-    return "#000000";
+    return DEFAULT_COLOR;
 }
 
 
 // Return color of node v
 function getNodeColor(graph, algo, v) {
     if (algo === "RLF" && graph.isInU2(v)) {
-        return "#CCCCCC";
+        return U2_COLOR;
     }
     return colorToString(graph.color(v));
 }
@@ -156,9 +159,9 @@ function getNodeColor(graph, algo, v) {
 // Return border color of node v
 function getNodeBorderColor(graph, algo, v) {
     if (algo === "RLF" && graph.isInU2(v)) {
-        return "#CCCCCC";
+        return U2_COLOR;
     }
-    return "#000000";
+    return DEFAULT_COLOR;
 }
 
 
@@ -210,7 +213,7 @@ function initCanvas() {
 
 // Clear canvas
 function clearCanvas() {
-    ctx.fillStyle = '#FFFFFF';
+    ctx.fillStyle = '#ffffff';
     ctx.beginPath();
     ctx.rect(0, 0, WIDTH, HEIGHT);
     ctx.closePath();
@@ -220,15 +223,14 @@ function clearCanvas() {
 
 // Return color name based on integer value
 function colorToString(i) {
-    var colors = ['red' , 'yellow', 'blue', 'fuchsia', 'green', 'orange',
-                  'purple', 'maroon', 'navy', 'olive', 'lime', 'aqua',
-                  'silver', 'teal'];
+    var colors = ["#0088cc", "#fbb450", "#ee5f5b", "#62c462", "#7d47b7",
+                  "#87623f", "#468446", "#f7f785", "#961313", "#5bc0de"];
 
     if (i === -1) {
-        return 'black';
+        return DEFAULT_COLOR;
     } else if (i >= colors.length) {
         console.log("Color higher than available: " + i);
-        return 'white';
+        return "#ffffff";
     } else {
         return colors[i];
     }
