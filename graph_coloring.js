@@ -360,6 +360,11 @@ function Graph(type) {
         return E[v] < 0 && F[v] >= 0;
     };
 
+    // Get number of colors used so far to color the graph
+    this.getUsedColors = function () {
+        return used_colors;
+    };
+
     // Return number of nodes
     this.size = function () {
         return size;
@@ -391,11 +396,6 @@ function Graph(type) {
         }
     };
 
-    // Return graph type (random8, envelope, ...)
-    this.type = function () {
-        return type;
-    };
-
     // Color the next node according to algorithm
     this.stepColor = function (algo, order) {
         var v = order[colored_nodes];
@@ -405,6 +405,11 @@ function Graph(type) {
         } else {
             return seqStepColor(v);
         }
+    };
+
+    // Return graph type (random8, envelope, ...)
+    this.type = function () {
+        return type;
     };
 
     // Initialize edges and colors
