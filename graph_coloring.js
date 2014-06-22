@@ -1,6 +1,7 @@
 var WIDTH = 400;
 var HEIGHT = 400;
-var DEFAULT_COLOR = "#000000";
+var DEFAULT_COLOR = "#ffffff";
+var EDGE_COLOR = "#000000";
 var U2_COLOR = "#e6e6e6";
 var U2_EDGE_COLOR = "#ee5f5b";
 
@@ -124,12 +125,20 @@ function draw(graph, algo, order) {
     for (i = 0; i < graph.size(); i++) {
         v = order[i];
         ctx.beginPath();
-        ctx.arc(coords[v][0], coords[v][1], 10, 0, 2*Math.PI);
+        ctx.arc(coords[v][0], coords[v][1], 12, 0, 2*Math.PI);
         ctx.fillStyle = getNodeColor(graph, algo, v);
         ctx.strokeStyle = getNodeBorderColor(graph, algo, v);
         ctx.fill();
-        ctx.lineWidth = 1;
+        ctx.lineWidth = 2;
         ctx.stroke();
+
+        if (graph.showEnum() && algo !== "RLF") {
+            ctx.fillStyle = "#000000";
+            ctx.font = "10pt arial";
+            ctx.fillText((i < 9 ? " " + (i + 1) : (i + 1)),
+                         coords[v][0] - 8,
+                         coords[v][1] + 4);
+        }
     }
 }
 
@@ -143,15 +152,15 @@ function getEdgeColor(graph, algo, v, w) {
             return U2_EDGE_COLOR;
         }
     }
-    return DEFAULT_COLOR;
+    return EDGE_COLOR;
 }
 
 
 // Return color of node v
 function getNodeColor(graph, algo, v) {
-    if (algo === "RLF" && graph.isInU2(v)) {
-        return U2_COLOR;
-    }
+    // if (algo === "RLF" && graph.isInU2(v)) {
+    //     return DEFAULT_COLOR;
+    // }
     return colorToString(graph.color(v));
 }
 
@@ -161,7 +170,7 @@ function getNodeBorderColor(graph, algo, v) {
     if (algo === "RLF" && graph.isInU2(v)) {
         return U2_COLOR;
     }
-    return DEFAULT_COLOR;
+    return EDGE_COLOR;
 }
 
 
@@ -223,14 +232,15 @@ function clearCanvas() {
 
 // Return color name based on integer value
 function colorToString(i) {
-    var colors = ["#0088cc", "#fbb450", "#ee5f5b", "#62c462", "#7d47b7",
-                  "#87623f", "#468446", "#f7f785", "#961313", "#5bc0de"];
+    // red, blue, green, yellow, purple, brown, dark green, orange, bordeaux,...
+    var colors = ["#ee5f5b", "#0088cc", "#62c462", "#f7f785", "#7d47b7",
+                  "#87623f", "#468446", "#fbb450", "#961313", "#5bc0de"];
 
     if (i === -1) {
         return DEFAULT_COLOR;
     } else if (i >= colors.length) {
         console.log("Color higher than available: " + i);
-        return "#ffffff";
+        return "#000000";
     } else {
         return colors[i];
     }
@@ -239,7 +249,6 @@ function colorToString(i) {
 
 // Undirected graph
 function Graph(type) {
-    // Construct n node graph
     var size;
     var edges;
     var color;
@@ -247,6 +256,7 @@ function Graph(type) {
     var next = 0;
     var colored_nodes = 0;
     var skip_on_new_color = false;
+    var show_enum = false;
     var E, F;
 
     var i, j;
@@ -365,6 +375,11 @@ function Graph(type) {
         return used_colors;
     };
 
+    // Show enumeration of nodes?
+    this.showEnum = function () {
+        return show_enum;
+    };
+
     // Return number of nodes
     this.size = function () {
         return size;
@@ -430,6 +445,14 @@ function Graph(type) {
         var w;
         var i;
 
+        if (colored_nodes === 0 && show_enum === false) {
+            show_enum = true;
+            return true;
+        }
+        if (colored_nodes === size) {
+            show_enum = false;
+            return false;
+        }
         for (i = 0; i < used_colors; i++) {
             adj_colors[i] = false;
         }
@@ -452,7 +475,7 @@ function Graph(type) {
         }
         colored_nodes++;
 
-        return colored_nodes < size;
+        return colored_nodes <= size;
     }
 
     // Color the next node of the RLF algorithm
